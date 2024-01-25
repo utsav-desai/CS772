@@ -2,15 +2,15 @@ import numpy as np
 
 
 
-class Dataset:
-
+class Palindrome_Dataset:
+    bit_size = None
     palindromes: np.array = None
     non_palindromes:np.array = None
 
-    def __init__(self, n_bits) -> None:
-        self.n = n_bits
-        palindromes, non_palindromes = [], [], []
-        for i in range(2**self.n):
+    def __init__(self, n_bits=10) -> None:
+        self.bit_size= n_bits
+        palindromes, non_palindromes = [], []
+        for i in range(2**self.bit_size):
             binary_string = format(i, '010b')
             if binary_string == binary_string[::-1]:
                 palindromes.append(binary_string)
@@ -27,7 +27,6 @@ class Dataset:
         x, y = np.concatenate((self.non_palindromes, self.palindromes)), []
         for i in range(biasing_factor):
             x = np.concatenate((x, self.palindromes))
-
         if shuffle:
             np.random.shuffle(x.flat)
         
@@ -38,23 +37,27 @@ class Dataset:
                 y.append(0)
         y = np.array(y)
 
+        x = np.array([np.reshape(np.array([int(char) for char in s]), (self.bit_size,)) for s in x])
+        # for i in range(len(x)):
+        #     x[i] = np.reshape(np.array([int(char) for char in x[i]]), (1, self.bit_size))
         return x,y
         
 
-        
 class Activation:
-    def __init__():
-        pass
+    def __init__(self, name):
+        self.name = name
 
     def activate(self, x):
-        pass
+        raise NotImplementedError("Subclasses must implement the 'activate' method")
     def grad(self, x):
-        pass
+        raise NotImplementedError("Subclasses must implement the 'grad' method")
 
 class Sigmoid(Activation):
-    super.__init__()
-    def __init__(self, alpha, beta):
+    
+    def __init__(self, alpha=1, beta=1):
+        super().__init__("sigmoid")
         self.alpha = alpha
+
         self.beta = beta
 
     def activate(self, x):
@@ -64,9 +67,19 @@ class Sigmoid(Activation):
         sig = self.activate(x)
         return sig*(1-sig)
     
+class Linear(Activation):
+    def __init__(self):
+        super().__init__("linear")
+    
+    def activate(self, x):
+        return x
+    
+    def grad(self, x=None):
+        return 1.0
+    
 class Relu(Activation):
-    def __init__():
-        pass
+    def __init__(self):
+        super().__init__("relu")
     def activate(self, x):
         return np.maximum(0, x)
     
