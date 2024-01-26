@@ -28,7 +28,7 @@ class MSE(Loss):    ## Mean squarred Error
         if isinstance(predicted)==list:
             predicted= np.array(predicted)
 
-        np.mean((predicted - target)**2)
+        return np.mean((predicted - target)**2)/2
     
     def grad(self, predicted, target):
         return (predicted-target)               ## Ignoring other normalization constant
@@ -41,9 +41,10 @@ class BCE(Loss):        # Binary Crossentropy
     
     def loss(self, predicted, target, epsilon=1e-12) -> float:
         predicted = np.clip(predicted, epsilon, 1 - epsilon)      # clip values to avoid log(0)
-        return -np.sum(target * np.log(predicted) + (1 - target) * np.log(1 - predicted))
+        return -np.sum(target * np.log(predicted) - (1 - target) * np.log(1 - predicted))
 
-    def grad(self, predicted, target):
+    def grad(self, predicted, target, epsilon=1e-12):
+        predicted = np.clip(predicted, epsilon, 1 - epsilon)
         return (predicted-target)/(predicted*(1-predicted))
 
 
