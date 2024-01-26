@@ -1,7 +1,9 @@
 import numpy as np
 
 
-
+"""
+A class for the Dataset
+"""
 class Palindrome_Dataset:
     bit_size = None
     palindromes: np.array = None
@@ -36,14 +38,17 @@ class Palindrome_Dataset:
             else:
                 y.append(0)
         y = np.array(y)
-
         x = np.array([np.reshape(np.array([int(char) for char in s]), (self.bit_size,)) for s in x])
-        # for i in range(len(x)):
-        #     x[i] = np.reshape(np.array([int(char) for char in x[i]]), (1, self.bit_size))
         return x,y
         
 
+
+"""
+This section contains some activation functions
+like sigmoid, relu, and linear
+"""
 class Activation:
+
     def __init__(self, name):
         self.name = name
 
@@ -52,21 +57,23 @@ class Activation:
     def grad(self, x):
         raise NotImplementedError("Subclasses must implement the 'grad' method")
 
+
 class Sigmoid(Activation):
     
-    def __init__(self, alpha=1, beta=1):
+    def __init__(self, alpha=1.0, beta=1.0):
         super().__init__("sigmoid")
         self.alpha = alpha
-
         self.beta = beta
 
     def activate(self, x):
-        return self.beta / (1 + np.exp(-1 *self.alpha* x))
+        x = np.clip(x, -500, 500)   ## To aid overflow warning
+        return self.beta / (1.0 + np.exp(-1 *self.alpha* x))
 
     def grad(self, x):
         sig = self.activate(x)
         return sig*(1-sig)
     
+
 class Linear(Activation):
     def __init__(self):
         super().__init__("linear")
@@ -76,6 +83,7 @@ class Linear(Activation):
     
     def grad(self, x=None):
         return 1.0
+    
     
 class Relu(Activation):
     def __init__(self):
@@ -89,3 +97,21 @@ class Relu(Activation):
         finite value for gradient at 0. This works well in practice.
         """
         return 1.0 if x > 0 else 0.0
+
+
+"""
+
+Some loss functions 
+"""
+
+def mse(y_true, y_pred):
+    if isinstance(y_true)==list:
+        y_true= np.array(y_true)
+    
+    if isinstance(y_pred)==list:
+        y_pred= np.array(y_pred)
+    np.mean((y_true - y_pred)**2)
+
+def accuracy(y_pred, y_true):
+    acc = y_pred.argmax(axis=1) == y_true.argmax(axis=1)
+    return acc.mean()
