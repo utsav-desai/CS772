@@ -27,8 +27,6 @@ class Palindrome_Model:
         self.output_size = output_size
         layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
 
-        # print(layer_sizes)
-
         if isinstance(activation, list):
             if len(layer_sizes)!= (len(activation) + 1):
                 print("Size of actiavation doesn't match the size of added layers !\nUsing ReLU by default!")
@@ -37,8 +35,6 @@ class Palindrome_Model:
             if activation.lower() not in ['relu', 'linear', 'sigmoid']:
                 raise NotImplementedError(f"'{activation.upper()}' Activation function is not implemented !!")
             activation = ['linear' for i in range(max(len(layer_sizes)-2,0))] + [activation]   
-
-        # print(activation)
             
         for i in range(len(layer_sizes)-1):
             self.layers.append(
@@ -117,18 +113,22 @@ class Palindrome_Model:
             self.layers[i]["biases"] -= self.learning_rate * bias_gradients[i]
 
     def train(self, X_train, y_train, epochs=10):
-            for epoch in range(epochs):
-                total_loss = 0.0
-                with tqdm(total=len(X_train), desc=f"Epoch {epoch + 1}/{epochs}", unit="sample") as pbar:
-                    for i in range(len(X_train)):
-                        input_sample = X_train[i]
-                        target = y_train[i]
-                        predicted = self.forward(input_sample)
-                        self.backward(input_sample, target)
-                        loss = self.loss(predicted, target)
-                        total_loss += loss
-                        pbar.set_postfix(loss=loss)
-                        pbar.update()
+        accuracies, losses = [], []
+        for epoch in range(epochs):
+            total_loss = 0.0
+            with tqdm(total=len(X_train), desc=f"Epoch {epoch + 1}/{epochs}", unit="sample") as pbar:
+                for i in range(len(X_train)):
+                    input_sample = X_train[i]
+                    target = y_train[i]
+                    predicted = self.forward(input_sample)
+                    self.backward(input_sample, target)
+                    loss = self.loss(predicted, target)
+                    total_loss += loss
+                    pbar.set_postfix(loss=loss)
+                    pbar.update()
+                accuracies.append(accuracy_metric(self.predict(X_train), y_train))
+                losses.append(total_loss)
+        return accuracies, losses
 
 
     def loss(self, predicted, target):
