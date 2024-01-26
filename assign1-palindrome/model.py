@@ -2,7 +2,10 @@ import numpy as np
 import os
 import pickle
 from typing import Union
-from utils import *
+from utils.activation import *
+from utils.losses import *
+
+
 
 class Palindrome_Model:
 
@@ -11,8 +14,14 @@ class Palindrome_Model:
     layers:list = []
     weights = None
     learning_rate = 1e-3
+    loss_metric = None
 
-    def __init__(self, input_size:int=10, output_size:int = 1, hidden_layer_sizes:list =[], activation: Union[str, list]="relu"):
+    loss_funcs = {
+    "mse": MSE(),
+    "bce": BCE()
+    }
+
+    def __init__(self, input_size:int=10, output_size:int = 1, hidden_layer_sizes:list =[], activation: Union[str, list]="linear"):
         self.input_size = input_size
         self.output_size = output_size
         layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
@@ -26,7 +35,7 @@ class Palindrome_Model:
         elif isinstance(activation, str):
             if activation.lower() not in ['relu', 'linear', 'sigmoid']:
                 raise NotImplementedError(f"'{activation.upper()}' Activation function is not implemented !!")
-            activation = ['relu' for i in range(max(len(layer_sizes)-2,0))] + [activation]   
+            activation = ['linear' for i in range(max(len(layer_sizes)-2,0))] + [activation]   
 
         # print(activation)
             
@@ -40,9 +49,9 @@ class Palindrome_Model:
                 }  
             )
 
-    def set_optimizer(self, lr:float, loss:str="mse"):
+    def set_optimizer(self, lr:float = 5e-3, loss:str = "mse"):
         self.learning_rate = lr
-        self.loss = loss
+        self.loss_metric = self.loss_funcs[loss]
 
     def forward(self, input:np.array):
         act_funcs = {
@@ -51,49 +60,60 @@ class Palindrome_Model:
             "sigmoid": Sigmoid()
         }
         x = input.flatten()
-        
         for layer in self.layers:
             # x = np.insert(x, 0,1)
             x = np.dot(x, layer["weights"]) + layer['biases']
             x = act_funcs[layer["activation"]].activate(x)
+
         return x
 
+    def predict(self, X):
+        predictions = []
+        for x in X:
+            y = self.forward(x)
+            if y >=0.5:
+                predictions.append[1]
+            else:
+                predictions.append[0]
+        return np.array(predictions)
+
+
     def backward(self, input, target):
+        if self.loss_metric ==None:
+            self.set_optimizer()
         act_funcs = {
             "relu": Relu(),
             "linear": Linear(),
             "sigmoid": Sigmoid()
         }
         # Initialize gradients
-        gradients = [np.zeros_like(layer["weights"]) for layer in self.layers]
+        weight_gradients = [np.zeros_like(layer["weights"]) for layer in self.layers]
+        bias_gradients = [np.zeros_like(layer['biases']) for layer in self.layers]
 
-        # Forward pass to compute intermediate values
         x = input.flatten()
-        intermediates = [x]
+        net = [x]              ## Same as used in slides, represents the output of layer
         for layer in self.layers:
-            x = np.insert(x, 0, 1)
-            intermediates.append(x)
-            x = np.dot(x, layer["weights"])
+            x = np.dot(x, layer["weights"]) + layer['biases']
+            net.append(x)
             x = act_funcs[layer["activation"]].activate(x)
 
-        # Compute loss gradient
-        loss_gradient = x - target  # Assuming mean squared error loss
+        loss_gradient = self.loss_metric.grad(net[-1], target)
 
-        # Backward pass to update gradients
         for i in range(len(self.layers) - 1, -1, -1):
             # Compute gradients for the current layer
-            activation_gradient = act_funcs[self.layers[i]["activation"]].grad(intermediates[i + 1])
-            gradients[i] = np.outer(intermediates[i], loss_gradient * activation_gradient)
+            activation_gradient = act_funcs[self.layers[i]["activation"]].grad(net[i + 1])
+            weight_gradients[i] = np.outer(net[i], loss_gradient * activation_gradient)
+            bias_gradients[i] = loss_gradient * activation_gradient
 
             # Compute loss gradient for the next layer in the backward pass
-            loss_gradient = np.dot(loss_gradient * activation_gradient, self.layers[i]["weights"][1:].T)
+            loss_gradient = np.dot(loss_gradient * activation_gradient, self.layers[i]["weights"].T)
 
-        # Update weights using gradients and learning rate
+        # Update weights and biases using gradients and learning rate
         for i in range(len(self.layers)):
-            self.layers[i]["weights"] -= self.learning_rate * gradients[i]
+            self.layers[i]["weights"] -= self.learning_rate * weight_gradients[i]
+            self.layers[i]["biases"] -= self.learning_rate * bias_gradients[i]
 
         
-
     def save(self, path="./weights"):
         with open( os.path.join('./weights/', 'layers.pkl'), 'wb') as file:
             pickle.dump(self.layers, file)
