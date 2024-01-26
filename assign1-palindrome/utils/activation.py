@@ -17,15 +17,13 @@ class Activation:
 
 class Sigmoid(Activation):
     
-    def __init__(self, alpha=1.0, beta=1.0):
+    def __init__(self,):
         super().__init__("sigmoid")
-        self.alpha = alpha
-        self.beta = beta
 
     def activate(self, x):
         x = np.clip(x, -500, 500)   ## To aid overflow warning
-        return self.beta / (1.0 + np.exp(-1 *self.alpha* x))
-
+        return 1.0 / (1.0 + np.exp(-1 * x))
+    
     def grad(self, x):
         sig = self.activate(x)
         return sig*(1-sig)

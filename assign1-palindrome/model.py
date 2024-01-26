@@ -32,14 +32,14 @@ class Palindrome_Model:
         self.output_size = output_size
         layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
 
-        if isinstance(activation, list):
-            if len(layer_sizes)!= (len(activation) + 1):
-                print("Size of actiavation doesn't match the size of added layers !\nUsing ReLU by default!")
-
-        elif isinstance(activation, str):
+        # if isinstance(activation, list):
+        #     if len(layer_sizes)!= (len(activation) + 1):
+        #         print("Size of actiavation doesn't match the size of added layers !\nUsing linear by default!")
+                
+        if isinstance(activation, str):
             if activation.lower() not in ['relu', 'linear', 'sigmoid']:
                 raise NotImplementedError(f"'{activation.upper()}' Activation function is not implemented !!")
-            activation = ['linear' for i in range(max(len(layer_sizes)-2,0))] + [activation]   
+            activation = ['linear' for i in range(max(len(layer_sizes)-2,0))] + [activation.lower()]   
             
         for i in range(len(layer_sizes)-1):
             self.layers.append(
@@ -59,7 +59,7 @@ class Palindrome_Model:
 
         x = input.flatten()
         for i in range(len(self.layers)):
-            x = np.dot(x, self.layers[i]["weights"]) + self.layer[i]['biases']
+            x = np.dot(x, self.layers[i]["weights"]) + self.layers[i]['biases']
             x = self.act_funcs[self.layers[i]["activation"]].activate(x)
 
         return x
@@ -88,16 +88,20 @@ class Palindrome_Model:
         bias_gradients = [np.zeros_like(layer['biases']) for layer in self.layers]
 
         x = input.flatten()
-        net = [x]               ## Same notation as used in slides, represents the output of layer
-        o = []
-        for layer in self.layers:
-            x = np.dot(x, layer["weights"]) + layer['biases']
-            net.append(x)
-            x = act_funcs[layer["activation"]].activate(x)
-            o.append(x)
 
-        loss_gradient = self.loss_metric.grad(o[-1], target)
-        
+        """
+        Same notation as used in slides, 
+        'net'   :       represents the output of layer     
+        """
+
+        net = [x]               
+        for i in range(len(self.layers)):
+            x = np.dot(x, self.layers[i]["weights"]) + self.layers[i]['biases']
+            net.append(x)
+            x = act_funcs[self.layers[i]["activation"]].activate(x)
+
+        loss_gradient = self.loss_metric.grad(x, target)
+        # print(f"Loss Gradient: {loss_gradient}")
         for i in range(len(self.layers) - 1, -1, -1):
             # Compute gradients for the current layer
             activation_gradient = act_funcs[self.layers[i]["activation"]].grad(net[i + 1])
@@ -106,7 +110,8 @@ class Palindrome_Model:
 
             # Compute loss gradient for the next layer in the backward pass
             loss_gradient = np.dot(loss_gradient * activation_gradient, self.layers[i]["weights"].T)
-
+        # print(f"\nWeight Gradients:\n {weight_gradients}\n\n\n")
+        # print(f"Bias Gradients:\n {bias_gradients}\n\n\n")
         # Update weights and biases using gradients and learning rate
         for i in range(len(self.layers)):
             self.layers[i]["weights"] -= self.learning_rate * weight_gradients[i]
