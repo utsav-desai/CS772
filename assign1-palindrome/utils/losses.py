@@ -1,4 +1,7 @@
 import numpy as np
+
+
+
 """
 
 Some loss functions 
@@ -36,9 +39,21 @@ class BCE(Loss):        # Binary Crossentropy
     def __init__(self, ) -> None:
         super().__init__("binary_cross_entropy")
     
-    def loss(self, y_pred, y_true, epsilon=1e-12) -> float:
-        y_pred = np.clip(y_pred, epsilon, 1 - epsilon)      # clip values to avoid log(0)
-        return -np.sum(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+    def loss(self, predicted, target, epsilon=1e-12) -> float:
+        predicted = np.clip(predicted, epsilon, 1 - epsilon)      # clip values to avoid log(0)
+        return -np.sum(target * np.log(predicted) + (1 - target) * np.log(1 - predicted))
 
     def grad(self, predicted, target):
         return (predicted-target)/(predicted*(1-predicted))
+
+
+
+def accuracy_metric(predicted, target):
+    if len(target)!=len(predicted):
+        raise ValueError("Both predicted and target vectors should be same size!")
+
+    correct = 0
+    for i in range(len(target)):
+        if target[i] == predicted[i]:
+            correct += 1
+    return correct / float(len(target)) * 100.0

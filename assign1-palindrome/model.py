@@ -4,7 +4,8 @@ import pickle
 from typing import Union
 from utils.activation import *
 from utils.losses import *
-
+from tqdm import tqdm
+np.random.seed(69)
 
 
 class Palindrome_Model:
@@ -72,9 +73,9 @@ class Palindrome_Model:
         for x in X:
             y = self.forward(x)
             if y >=0.5:
-                predictions.append[1]
+                predictions.append(1)
             else:
-                predictions.append[0]
+                predictions.append(0)
         return np.array(predictions)
 
 
@@ -109,10 +110,29 @@ class Palindrome_Model:
             loss_gradient = np.dot(loss_gradient * activation_gradient, self.layers[i]["weights"].T)
 
         # Update weights and biases using gradients and learning rate
+        # print(weight_gradients)
+        # print(bias_gradients)
         for i in range(len(self.layers)):
             self.layers[i]["weights"] -= self.learning_rate * weight_gradients[i]
             self.layers[i]["biases"] -= self.learning_rate * bias_gradients[i]
 
+    def train(self, X_train, y_train, epochs=10):
+            for epoch in range(epochs):
+                total_loss = 0.0
+                with tqdm(total=len(X_train), desc=f"Epoch {epoch + 1}/{epochs}", unit="sample") as pbar:
+                    for i in range(len(X_train)):
+                        input_sample = X_train[i]
+                        target = y_train[i]
+                        predicted = self.forward(input_sample)
+                        self.backward(input_sample, target)
+                        loss = self.loss(predicted, target)
+                        total_loss += loss
+                        pbar.set_postfix(loss=loss)
+                        pbar.update()
+
+
+    def loss(self, predicted, target):
+        return self.loss_metric.loss(predicted, target)
         
     def save(self, path="./weights"):
         with open( os.path.join('./weights/', 'layers.pkl'), 'wb') as file:
