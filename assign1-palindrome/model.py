@@ -46,7 +46,7 @@ class Palindrome_Model:
         if isinstance(activation, str):
             if activation.lower() not in ['relu', 'linear', 'sigmoid']:
                 raise NotImplementedError(f"'{activation.upper()}' Activation function is not implemented !!")
-            activation = ['linear' for i in range(max(len(layer_sizes)-2,0))] + [activation.lower()]   
+            activation = ['relu' for i in range(max(len(layer_sizes)-2,0))] + [activation.lower()]   
             
         for i in range(len(layer_sizes)-1):
             self.layers.append(
