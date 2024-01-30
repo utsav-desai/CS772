@@ -21,11 +21,12 @@ class Sigmoid(Activation):
         super().__init__("sigmoid")
 
     def activate(self, x):
-        x = np.clip(x, -500, 500)   ## To aid overflow warning
+        x = np.clip(x, -500.0, 500.0)   ## To aid overflow warning
         return 1.0 / (1.0 + np.exp(-1 * x))
     
     def grad(self, x):
         sig = self.activate(x)
+        sig = np.clip(sig, 1e-7, 1.0)
         return sig*(1-sig)
     
 

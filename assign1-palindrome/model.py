@@ -5,8 +5,13 @@ from typing import Union
 from utils.activation import *
 from utils.losses import *
 from tqdm import tqdm
-np.random.seed(69)
 
+
+optimization_methods = {
+    'sgd',  # Stochastic Gradient Descent
+    'bgd',  # Batch Gradient Descent
+    'mbgd'  # Mini-Batch Gradient Descent
+    }
 
 class Palindrome_Model:
 
@@ -16,6 +21,8 @@ class Palindrome_Model:
     weights = None
     learning_rate = 1e-3
     loss_metric = None
+    weight_gradients=None
+    bias_gradients=None
 
     loss_funcs = {
         "mse": MSE(),
@@ -51,91 +58,110 @@ class Palindrome_Model:
                 }  
             )
 
-    def set_optimizer(self, lr:float = 5e-3, loss:str = "mse"):
+    def set_optimizer(self, lr:float = 5e-3, loss:str = "mse",optimization_method="bgd"):
         self.learning_rate = lr
         self.loss_metric = self.loss_funcs[loss]
+        if optimization_method.lower() in optimization_methods:
+            self.optimization_method = optimization_method
+        else:
+            self.optimization_method='mbgd'
 
-    def forward(self, input:np.array):
 
-        x = input.flatten()
-        for i in range(len(self.layers)):
-            x = np.dot(x, self.layers[i]["weights"]) + self.layers[i]['biases']
-            x = self.act_funcs[self.layers[i]["activation"]].activate(x)
-
-        return x
+    def forward(self, inputs:Union[list, np.ndarray]):
+        o = []
+        for x in inputs:
+            x = x.flatten()
+            for i in range(len(self.layers)):
+                x = np.dot(x, self.layers[i]["weights"]) + self.layers[i]['biases']
+                x = self.act_funcs[self.layers[i]["activation"]].activate(x)
+            o.append(x)
+        return np.array(o)
+    
+    def __call__(self,inputs):
+        return self.forward(inputs)
 
     def predict(self, X):
         predictions = []
         for x in X:
-            y = self.forward(x)
-            if y >=0.5:
+            y = self.forward([x])
+            if y[0] >=0.5:
                 predictions.append(1)
             else:
                 predictions.append(0)
         return np.array(predictions)
 
 
-    def backward(self, input, target):
+    def backward(self, inputs, targets):
+        """
+        Same notation are used as in slides, 
+        'x'     : represent input
+        'net'   : represents the output of layer without activation
+        'o'     : represents the output after activation  
+        """
         if self.loss_metric ==None:
             self.set_optimizer()
-        act_funcs = {
-            "relu": Relu(),
-            "linear": Linear(),
-            "sigmoid": Sigmoid()
-        }
         # Initialize gradients
-        weight_gradients = [np.zeros_like(layer["weights"]) for layer in self.layers]
-        bias_gradients = [np.zeros_like(layer['biases']) for layer in self.layers]
+        # print("Removing gradients...")
+        self.weight_gradients = [np.zeros_like(layer["weights"]) for layer in self.layers]
+        self.bias_gradients = [np.zeros_like(layer['biases']) for layer in self.layers]
+        total_loss =0.0
 
-        x = input.flatten()
+        for input, target in zip(inputs, targets):
+            x = input.flatten()
+            net, o = [x], [x]
+            for i in range(len(self.layers)):
+                x = np.dot(x, self.layers[i]["weights"]) + self.layers[i]['biases']
+                net.append(x)
+                x = self.act_funcs[self.layers[i]["activation"]].activate(x)
+                o.append(x)
 
-        """
-        Same notation as used in slides, 
-        'net'   :       represents the output of layer     
-        """
+            loss = self.loss(x, target)
+            total_loss += loss
+            
+            loss_gradient = self.loss_metric.grad(x, target)                        # ∂L/∂o
+            
+            for i in range(len(self.layers) - 1, -1, -1):
+                # Compute gradients for the current layer
+                activation_gradient = self.act_funcs[self.layers[i]["activation"]].grad(net[i + 1])
+                self.weight_gradients[i] += np.outer(o[i], loss_gradient * activation_gradient)
+                self.bias_gradients[i] += loss_gradient * activation_gradient
 
-        net = [x]               
-        for i in range(len(self.layers)):
-            x = np.dot(x, self.layers[i]["weights"]) + self.layers[i]['biases']
-            net.append(x)
-            x = act_funcs[self.layers[i]["activation"]].activate(x)
+                # Compute loss gradient for the next layer in the backward pass
+                loss_gradient = np.dot(loss_gradient * activation_gradient, self.layers[i]["weights"].T)
 
-        loss_gradient = self.loss_metric.grad(x, target)
-        # print(f"Loss Gradient: {loss_gradient}")
-        for i in range(len(self.layers) - 1, -1, -1):
-            # Compute gradients for the current layer
-            activation_gradient = act_funcs[self.layers[i]["activation"]].grad(net[i + 1])
-            weight_gradients[i] = np.outer(net[i], loss_gradient * activation_gradient)
-            bias_gradients[i] = loss_gradient * activation_gradient
+            for i in range(len(self.layers)):
+                self.layers[i]["weights"] -= self.learning_rate * (self.weight_gradients[i]/len(inputs))
+                self.layers[i]["biases"] -= self.learning_rate * (self.bias_gradients[i]/len(inputs))
 
-            # Compute loss gradient for the next layer in the backward pass
-            loss_gradient = np.dot(loss_gradient * activation_gradient, self.layers[i]["weights"].T)
-        # print(f"\nWeight Gradients:\n {weight_gradients}\n\n\n")
-        # print(f"Bias Gradients:\n {bias_gradients}\n\n\n")
-        # Update weights and biases using gradients and learning rate
-        for i in range(len(self.layers)):
-            self.layers[i]["weights"] -= self.learning_rate * weight_gradients[i]
-            self.layers[i]["biases"] -= self.learning_rate * bias_gradients[i]
-
-    def train(self, X_train, y_train, epochs=10):
+    
+    def train(self, X_train, y_train, epochs=10, batch_size=32):
         accuracies, losses = [], []
         for epoch in range(epochs):
             total_loss = 0.0
             with tqdm(total=len(X_train), desc=f"Epoch {epoch + 1}/{epochs}", unit="sample") as pbar:
-                for i in range(len(X_train)):
-                    input_sample = X_train[i]
-                    target = y_train[i]
-                    predicted = self.forward(input_sample)
-                    self.backward(input_sample, target)
-                    loss = self.loss(predicted, target)
-                    total_loss += loss
-                    # pbar.set_postfix(loss=loss)
-                    pbar.update()
-                accuracy  = accuracy_metric(self.predict(X_train), y_train)
-                pbar.set_postfix(loss=total_loss,accuracy=accuracy)
+
+                if self.optimization_method=='mbgd':
+                    x = 5
+
+                elif self.optimization_method=='bgd':
+                    for i in range(0, len(X_train), batch_size):
+                        input_samples = X_train[i: i+batch_size]
+                        targets = y_train[i:i+batch_size]
+                        predicted = self.forward(input_samples)
+                        batch_loss = self.loss(predicted, targets)                    
+                        total_loss += batch_loss
+                        self.backward(input_samples, targets)
+                        pbar.update(batch_size)
+                else:
+                    x = 5
+               
+                accuracy = accuracy_metric(self.predict(X_train), y_train)
+                pbar.set_postfix(loss=total_loss, accuracy=accuracy)
                 accuracies.append(accuracy)
                 losses.append(total_loss)
+
         return accuracies, losses
+
 
 
     def loss(self, predicted, target):
