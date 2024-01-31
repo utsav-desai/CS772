@@ -52,5 +52,5 @@ class Relu(Activation):
         However relu is not differentiable at 0, we can take an arbitrary 
         finite value for gradient at 0. This works well in practice.
         """
-        return np.ones_like(x) if x > 0 else np.zeros_like(x)
+        return 1.0 if x[0] > 0 else 0.0
 

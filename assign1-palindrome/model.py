@@ -7,7 +7,7 @@ from utils.losses import *
 from tqdm import tqdm
 
 
-optimization_methods = {
+optimizers = {
     'sgd',  # Stochastic Gradient Descent
     'bgd',  # Batch Gradient Descent
     'mbgd'  # Mini-Batch Gradient Descent
@@ -34,14 +34,15 @@ class Palindrome_Model:
         "sigmoid": Sigmoid()
     }
 
-    def __init__(self, input_size:int=10, output_size:int = 1, hidden_layer_sizes:list =[], activation: Union[str, list]="linear"):
+    def __init__(self, input_size:int=10, output_size:int = 1, hidden_layer_sizes:list =[], activation: Union[str, list]="relu"):
         self.input_size = input_size
         self.output_size = output_size
         layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
 
-        # if isinstance(activation, list):
-        #     if len(layer_sizes)!= (len(activation) + 1):
-        #         print("Size of actiavation doesn't match the size of added layers !\nUsing linear by default!")
+        if isinstance(activation, list):
+            if len(layer_sizes)!= (len(activation) + 1):
+                print("Size of actiavation doesn't match the size of added layers !\nUsing relu by default!")
+            activation = ['relu' for i in range(max(len(layer_sizes)-1,0))]
                 
         if isinstance(activation, str):
             if activation.lower() not in ['relu', 'linear', 'sigmoid']:
@@ -58,11 +59,11 @@ class Palindrome_Model:
                 }  
             )
 
-    def set_optimizer(self, lr:float = 5e-3, loss:str = "mse",optimization_method="bgd"):
+    def set_optimizer(self, lr:float = 5e-3, loss:str = "mse",optimizer="bgd"):
         self.learning_rate = lr
         self.loss_metric = self.loss_funcs[loss]
-        if optimization_method.lower() in optimization_methods:
-            self.optimization_method = optimization_method
+        if optimizer.lower() in optimizers:
+            self.optimizer = optimizer
         else:
             self.optimization_method='mbgd'
 
@@ -134,26 +135,38 @@ class Palindrome_Model:
                 self.layers[i]["biases"] -= self.learning_rate * (self.bias_gradients[i]/len(inputs))
 
     
-    def train(self, X_train, y_train, epochs=10, batch_size=32):
+    def train(self, X_train, y_train, epochs=10, batch_size=16):
         accuracies, losses = [], []
         for epoch in range(epochs):
             total_loss = 0.0
-            with tqdm(total=len(X_train), desc=f"Epoch {epoch + 1}/{epochs}", unit="sample") as pbar:
+            with tqdm(total=batch_size, desc=f"Epoch {epoch + 1}/{epochs}", unit="sample") as pbar:
+                if self.optimizer=='mbgd':
+                    indices = np.random.permutation(len(X_train))
+                    indices = indices[:batch_size]
+                    input_samples = X_train[indices]
+                    targets = y_train[indices]
+                    predicted = self.forward(input_samples)
+                    batch_loss = self.loss(predicted, targets)                    
+                    total_loss += batch_loss
+                    self.backward(input_samples, targets)
+                    pbar.update(batch_size)
 
-                if self.optimization_method=='mbgd':
-                    x = 5
-
-                elif self.optimization_method=='bgd':
+                elif self.optimizer=='bgd':
                     for i in range(0, len(X_train), batch_size):
-                        input_samples = X_train[i: i+batch_size]
+                        input_samples = X_train[i:i+batch_size]
                         targets = y_train[i:i+batch_size]
+
                         predicted = self.forward(input_samples)
                         batch_loss = self.loss(predicted, targets)                    
                         total_loss += batch_loss
                         self.backward(input_samples, targets)
                         pbar.update(batch_size)
+
+                elif self.optimizer=="sgd":
+                    for i in range(len(X_train)):
+                        input_sample = X_train[i]
                 else:
-                    x = 5
+                    pass
                
                 accuracy = accuracy_metric(self.predict(X_train), y_train)
                 pbar.set_postfix(loss=total_loss, accuracy=accuracy)

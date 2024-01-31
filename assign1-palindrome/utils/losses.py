@@ -38,7 +38,7 @@ class BCE(Loss):        # Binary Crossentropy
     
     def loss(self, predicted, target, epsilon=1e-12) -> float:
         predicted = np.clip(predicted, epsilon, 1 - epsilon)      # clip values to avoid log(0)
-        return -np.sum(target * np.log(predicted) - (1 - target) * np.log(1 - predicted))
+        return -np.sum(target * np.log(predicted) + (1 - target) * np.log(1 - predicted))
 
     def grad(self, predicted, target, epsilon=1e-9):
         predicted = np.clip(predicted, epsilon, 1 - epsilon)
