@@ -27,8 +27,6 @@ class Palindrome_Model:
         self.output_size = output_size
         layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
 
-        # print(layer_sizes)
-
         if isinstance(activation, list):
             if len(layer_sizes)!= (len(activation) + 1):
                 print("Size of actiavation doesn't match the size of added layers !\nUsing ReLU by default!")
@@ -37,8 +35,6 @@ class Palindrome_Model:
             if activation.lower() not in ['relu', 'linear', 'sigmoid']:
                 raise NotImplementedError(f"'{activation.upper()}' Activation function is not implemented !!")
             activation = ['linear' for i in range(max(len(layer_sizes)-2,0))] + [activation]   
-
-        # print(activation)
             
         for i in range(len(layer_sizes)-1):
             self.layers.append(
@@ -79,7 +75,7 @@ class Palindrome_Model:
         return np.array(predictions)
 
 
-    def backward(self, input, target):
+    def     backward(self, input, target):
         if self.loss_metric ==None:
             self.set_optimizer()
         act_funcs = {
