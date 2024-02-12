@@ -22,18 +22,15 @@ class MSE(Loss):    ## Mean squarred Error
         super().__init__("mse")
 
     def loss(self, predicted, target):
-        if isinstance(target)==list:
+        if isinstance(target,list):
             target= np.array(target)
-
-        if isinstance(predicted)==list:
+        if isinstance(predicted,list):
             predicted= np.array(predicted)
-
-        np.mean((predicted - target)**2)
+        return np.mean((predicted - target)**2)/2
     
     def grad(self, predicted, target):
-        return (predicted-target)               ## Ignoring other normalization constant
+        return (predicted-target)         ## Ignoring other normalization constant
         
-
 
 class BCE(Loss):        # Binary Crossentropy
     def __init__(self, ) -> None:
@@ -43,9 +40,9 @@ class BCE(Loss):        # Binary Crossentropy
         predicted = np.clip(predicted, epsilon, 1 - epsilon)      # clip values to avoid log(0)
         return -np.sum(target * np.log(predicted) + (1 - target) * np.log(1 - predicted))
 
-    def grad(self, predicted, target):
+    def grad(self, predicted, target, epsilon=1e-9):
+        predicted = np.clip(predicted, epsilon, 1 - epsilon)
         return (predicted-target)/(predicted*(1-predicted))
-
 
 
 def accuracy_metric(predicted, target):

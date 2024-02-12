@@ -26,7 +26,7 @@ class Palindrome_Dataset:
         for i in range(biasing_factor):
             x = np.concatenate((x, self.palindromes))
         if shuffle:
-            np.random.shuffle(x.flat)
+            np.random.shuffle(x)
         
         for binary_string in x: 
             if binary_string == binary_string[::-1]:
