@@ -7,9 +7,14 @@ Initially we trained a network with 4 neuron in the hidden layer, on visualizing
 ## How to Use this code
 
 There is palindrome.ipynb file which contains the whole implementation of Backpropagation as well as model training.
-Just go through each shell in the notebook.
+Just go through each shell in the notebook. K-fold cross validation is also implemented at the end of the notebook.
+
+## How to run UI
+
+Go to *webui* folder present in the main folder and run the test.ipynb file; You'll get a URL for testing the model. Enter any string of length 10 made of 1 and 0 and press submit, you'll get the result in the adjacent textbox.
 
 ## Python Packages Required
 
     - numpy==1.24.3
     - matplotlib==3.7.5
+    - sklearn = 1.2.1
