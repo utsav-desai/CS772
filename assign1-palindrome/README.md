@@ -7,6 +7,8 @@ Initially we trained a network with 4 neuron in the hidden layer, on visualizing
 ## How to Use this code
 
 There is palindrome.ipynb file which contains the whole implementation of Backpropagation as well as model training.
+There is a variable in the notebook named *biasing_factor* which is use to increase the number of samples of palindromes in the dataset by repeating them, there will be a total of 32 * *biasing_factor* palindromes in the dataset. For our training, we have used *biasing_factor* = 0.
+
 Just go through each shell in the notebook. K-fold cross validation is also implemented at the end of the notebook.
 
 ## How to run UI
@@ -17,4 +19,4 @@ Go to *webui* folder present in the main folder and run the test.ipynb file; You
 
     - numpy==1.24.3
     - matplotlib==3.7.5
-    - sklearn = 1.2.1
+    - sklearn==1.2.1
