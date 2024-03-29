@@ -4,6 +4,8 @@ from activation import *
 from utils import *
 from sklearn.model_selection import KFold
 
+np.random.seed(42)
+
 
 """
 Some representation which will help understand this code base.
@@ -15,12 +17,17 @@ X_i_j   -
 """
 
 class SingleRecurrentPerceptron:
-    def __init__(self, vec_len=10, lr=0.05):
+    def __init__(self, vec_len=10, lr=0.05, momentum=0.0):
           
         # Initialize weights and bias
         self.weights = np.random.randn(vec_len)
-        self.threshold = np.random.randn(1)
+        self.threshold = np.zeros(1)
+        self.weights_grad = None
+        self.threshold_grad = None
         self.lr = lr
+        self.momentum = momentum
+        self.weight_velocity = None
+        self.threshold_velocity = None
 
    
     def forward(self, inputs):
@@ -42,26 +49,10 @@ class SingleRecurrentPerceptron:
             prediction.append(np.array(out))
             X_i_b.append(np.array(X_i_j))
         return X_i_b, prediction
-
-    # def backward(self, inputs, target):
-    #     """inputs-- (B, Tx, 10)
-    #        target-- (B, Tx)
-    #         """   
-    #     X, prediction = self.forward(inputs)
-
-    #     for i in range(len(inputs)):      # iterate over each example
-    #         delta_w = np.zeros(10)
-    #         for j in range(len(inputs[i])):     # iterate over each time
-    #             x = X[i][j]
-    #             delta_w += -self.lr * (target[i][j]-prediction[i][j]) * (x)
-    #         self.weights += delta_w
-    
-
             
-    def backward_gpt(self, inputs, targets):
+    def backward(self, inputs, targets):
 
         X_i_b, prediction = self.forward(inputs)
-         
         B = len(inputs)  # Get batch size, sequence length, and feature dim
 
         # Initialize gradients for weights and bias
@@ -84,16 +75,20 @@ class SingleRecurrentPerceptron:
                     delta_t = delta_prev * sigmoid_derivative(prediction[b][t]) + np.dot(delta_t, self.weights)
                 else:
                     delta_t = delta_prev * sigmoid_derivative(prediction[b][t])
-                self.weights_grad -= X_i_b[b][t] * delta_t*0.3  # Exclude previous output
+                self.weights_grad -= X_i_b[b][t] * delta_t  # Exclude previous output
                 delta_prev = delta_t
 
         # Normalize gradients by batch size
         self.weights_grad /= B
         self.threshold_grad /= B
 
+        # Compute Momentum
+        self.weight_velocity = self.momentum*self.weight_velocity - self.lr * self.weights_grad
+        self.threshold_velocity = self.momentum*self.threshold_velocity - self.lr * self.threshold_grad
+
         # Update weights and bias
-        self.weights -= self.lr * self.weights_grad
-        self.threshold -= self.lr * self.threshold_grad
+        self.weights += self.weight_velocity 
+        self.threshold += self.threshold_velocity
 
     def calculate_loss(self, inputs, targets):
         
@@ -122,17 +117,21 @@ class SingleRecurrentPerceptron:
             
         # Average loss over the minibatch
         return loss / B, accuracy/B
-
-
         
-    def train(self, inputs, targets, epochs):
+    def train(self, inputs, targets, epochs,k_fold=5):
+        """
+        inputs-- (B, Tx, 10)
+        target-- (B, Tx)
+        """          
+        self.weight_velocity = np.zeros_like(self.weights)
+        self.threshold_velocity = np.zeros_like(self.threshold)
+        train_losses = []
+        train_accs = []
+        val_losses = []
+        val_accs = []
 
-        """inputs-- (B, Tx, 10)
-           target-- (B, Tx)
-            """           
-        
         for iter in range(epochs):
-            kf = KFold(n_splits=5, shuffle=True, random_state=42)
+            kf = KFold(n_splits=k_fold, shuffle=True, random_state=42)
             train_loss = 0
             val_loss = 0
             train_accuracy = 0
@@ -140,16 +139,33 @@ class SingleRecurrentPerceptron:
             for train_index, val_index in kf.split(inputs):
                 train_inputs, val_inputs = [inputs[i] for i in train_index], [inputs[i] for i in val_index]
                 train_targets, val_targets = [targets[i] for i in train_index], [targets[i] for i in val_index]
-                self.backward_gpt(inputs, targets)
+                self.backward(train_inputs, train_targets)
                 delta_loss, delta_accuracy = self.calculate_loss(train_inputs,train_targets)
                 train_loss += delta_loss
                 train_accuracy += delta_accuracy
                 delta_loss, delta_accuracy = self.calculate_loss(val_inputs,val_targets )
-
                 val_loss += delta_loss
                 val_accuracy += delta_accuracy
-            print(f"epoch: {iter:.2f}, training loss : {train_loss/5:.2f}, training accuracy: {train_accuracy*100/5:.2f}%, validation loss: {val_loss/5:.2f}, validation accuracy: {val_accuracy*100/5:.2f}%")
+
+            print(f"epoch: {iter+1}, training loss : {train_loss/k_fold:.2f}, training accuracy: {train_accuracy*100/k_fold:.2f}%, validation loss: {val_loss/k_fold:.2f}, validation accuracy: {val_accuracy*100/k_fold:.2f}%")
+            
+            train_losses.append(train_loss/k_fold)
+            val_losses.append(val_loss/k_fold)
+            train_accs.append(train_accuracy*100/k_fold)
+            val_accs.append(val_accuracy*100/k_fold)
+        
+        return {
+            "train_loss": train_losses,
+            "val_loss": val_losses,
+            "train_accuracy": train_accs,
+            "val_accuracy": val_accs
+        }
     
+    def zero_grad(self):
+        self.weights_grad=0
+        self.threshold_grad=0
+        self.weight_velocity=0
+        self.threshold_velocity=0
 
     def save(self,path="model.pkl"):
         with open(path, 'wb') as f:
