@@ -51,8 +51,6 @@ def fetch_data(train_path, test_path):
     return train_sentences, test_sentences,  train_labels, test_labels
 
 
-
-
 """
 Function to process the POS data
 into One hot vectors,

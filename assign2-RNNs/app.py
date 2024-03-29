@@ -7,7 +7,7 @@ from model import SingleRecurrentPerceptron
 
 
 model = SingleRecurrentPerceptron()
-model = model.load("models/recurrent_perceptron.pkl")
+model = model.load("models/recurrent_perceptron_80%.pkl")
 
 
 def forward_per_input(inputs):
@@ -27,13 +27,13 @@ def forward_per_input(inputs):
     out = (np.array(out) > 0.5) * 1
     return out
 
-def predict(input_string):
-    inp = input_string.split(',')
-    input_string = [int(i) for i in inp]
-    print(input_string)
-    result = forward_per_input(input_string)
+def predict(POS_Tags):
+    inp = POS_Tags.split(',')
+    POS_Tags = [int(i) for i in inp]
+    print(POS_Tags)
+    result = forward_per_input(POS_Tags)
     out = [str(i) for i in result]
-    out = ' '.join(out)
+    out = ','.join(out)
     return out
 
 app = Flask(__name__)
@@ -45,10 +45,15 @@ def home():
 @app.route("/classify", methods=["POST"])
 def classify():
     data = request.get_json()
-    input_string = data["inputString"]
-    out = predict(input_string)
+    POS_Tags = data["inputString"]
+    out = predict(POS_Tags)
     return jsonify({"result": out})
 
 if __name__ == "__main__":
-    iface = gr.Interface(fn=predict, inputs="text", outputs="text")
+
+    examples = [
+        ["1,4,3,1,4,4,3,1,4", "1,1,1,0,1,1,1,0,1"]
+    ]
+
+    iface = gr.Interface(fn=predict, inputs=gr.Textbox(label="POS Tags"), outputs=gr.Textbox(label="Noun Chunks"), title="Noun Chunk Marker", examples=examples)
     iface.launch(share=True)
