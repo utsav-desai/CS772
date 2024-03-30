@@ -6,6 +6,12 @@ We trained a recurrent perceptron with 10 inputs as described in the problem sta
 
 ## How to Use this code
 
+You can visit this huggingface space to run the demo: [https://huggingface.co/spaces/scriea/Noun_Chunk_Marker]()
+
+
+
+Alternativey you can also run it on your device locally.
+
 Clone this repo [https://github.com/utsav-desai/CS772](). Open terminal do the following
 
 ```bash
@@ -17,7 +23,8 @@ You will the following UI, enter your the POS Tags for your text, an example inp
 
 ![1711779041465](image/README/1711779041465.png)
 
-Python Packages Required
+
+### Python Packages Required
 
 * numpy==1.24.3
 * matplotlib==3.7.5

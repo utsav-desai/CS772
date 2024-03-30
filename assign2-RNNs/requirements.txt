@@ -1,0 +1,4 @@
+flask
+gradio==4.24.0
+numpy==1.26.3
+scikit-learn==1.4.0
