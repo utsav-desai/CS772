@@ -4,7 +4,7 @@ from activation import *
 from utils import *
 from sklearn.model_selection import KFold
 
-np.random.seed(42)
+np.random.seed(69)
 
 
 """
@@ -17,7 +17,7 @@ X_i_j   -
 """
 
 class SingleRecurrentPerceptron:
-    def __init__(self, vec_len=10, lr=0.05, momentum=0.0):
+    def __init__(self, vec_len=10, lr=0.05, momentum=0.0, anneal_momentum=0.0):
           
         # Initialize weights and bias
         self.weights = np.random.randn(vec_len)
@@ -26,6 +26,7 @@ class SingleRecurrentPerceptron:
         self.threshold_grad = None
         self.lr = lr
         self.momentum = momentum
+        self.anneal_momentum = anneal_momentum
         self.weight_velocity = None
         self.threshold_velocity = None
 
@@ -136,6 +137,8 @@ class SingleRecurrentPerceptron:
             val_loss = 0
             train_accuracy = 0
             val_accuracy = 0
+            ##Annealing Momentum
+            self.momentum = iter*(self.anneal_momentum-self.momentum)/(epochs-1) + self.momentum
             for train_index, val_index in kf.split(inputs):
                 train_inputs, val_inputs = [inputs[i] for i in train_index], [inputs[i] for i in val_index]
                 train_targets, val_targets = [targets[i] for i in train_index], [targets[i] for i in val_index]
@@ -166,6 +169,8 @@ class SingleRecurrentPerceptron:
         self.threshold_grad=0
         self.weight_velocity=0
         self.threshold_velocity=0
+        self.anneal_momentum=0
+        self.momentum=0
 
     def save(self,path="model.pkl"):
         with open(path, 'wb') as f:
